@@ -52,66 +52,70 @@ for i in 1:crowd_shippers
 end
 
 
+
 model = Model(Cbc.Optimizer)
 set_optimizer_attribute(model, "threads", 6) 
 
-@variable(model, x_inc[i = 1:stations, j = 1:stations, k = 1:crowd_shippers, p = 1:packages; adj_mat[i, j] == 1], Bin)
-@variable(model, x_out[i = 1:stations, j = 1:stations, k = 1:crowd_shippers, p = 1:packages; adj_mat[i, j] == 1], Bin)
+@variable(model, x_inc[i = 1:stations, j = 1:stations, k = 1:crowd_shippers, p = 1:packages; adj_mat[i, j] == 1 && T[i, j, k] == 1], Bin)
+@variable(model, x_out[i = 1:stations, j = 1:stations, k = 1:crowd_shippers, p = 1:packages; adj_mat[i, j] == 1 && T[i, j, k] == 1], Bin)
 @variable(model, z[1:crowd_shippers], Bin)
 
 
 @constraint(model, 
-    start_pkg[id = 1:packages], 
-    sum(T[P[id][1], j, k] .* x_out[P[id][1], j, k, id] 
-        for j = 1:stations, k = 1:crowd_shippers 
-            if adj_mat[P[id][1], j] == 1)
+    start_pkg[id = 1:packages, ], 
+    sum(x_out[P[id][1], j, k, id] 
+        for j = 1:stations, k = 1:crowd_shippers
+            if adj_mat[P[id][1], j] == 1 && T[P[id][1], j, k] == 1)
     == 1)
 
 @constraint(model, 
     arrive_pkg[id = 1:packages], 
-    sum(T[j, P[id][2], k] .* x_inc[j, P[id][2], k, id] 
-        for j = 1:stations, k = 1:crowd_shippers 
-            if adj_mat[j, P[id][2]] == 1) 
+    sum(x_inc[j, P[id][2], k, id] 
+        for j = 1:stations, k = 1:crowd_shippers
+            if adj_mat[j, P[id][2]] == 1 && T[j, P[id][2], k] == 1) 
     == 1)
 
 
 @constraint(model, 
     flow[id = 1:packages, i = 1:stations, k = 1:crowd_shippers], 
-    sum(T[i, j, k] .* x_inc[i, j, k, id] for  j = 1:stations if adj_mat[i, j] == 1) 
+    sum(x_inc[i, j, k, id] for j = 1:stations if adj_mat[i, j] == 1 && T[i, j, k] == 1) 
         - 
-    sum(T[i, j, k] .* x_out[i, j, k, id] for  j = 1:stations if adj_mat[i, j] == 1) 
+    sum(x_out[i, j, k, id] for j = 1:stations if adj_mat[i, j] == 1 && T[i, j, k] == 1) 
     == 0)
 
 
 @constraint(model, 
     select_cs[k = 1:crowd_shippers], 
-    sum(T[i, j, k] .* x_inc[i, j, k, p] 
+    sum(x_inc[i, j, k, p] 
         for i = 1:stations, j = 1:stations, p = 1:packages 
-            if adj_mat[i, j] == 1) 
+            if adj_mat[i, j] == 1 && T[i, j, k] == 1) 
     <= 1000z[k])
 
 
 
 @constraint(model, 
-    one_package[i = 1:stations, j = 1:stations, k = 1:crowd_shippers; adj_mat[i, j] == 1], 
-    sum(T[i, j, k] .* x_inc[i, j, k, p] for p in 1:packages) <= 1)
+    one_package_inc[i = 1:stations, j = 1:stations, k = 1:crowd_shippers; adj_mat[i, j] == 1 && T[i, j, k] == 1], 
+    sum(x_inc[i, j, k, p] for p in 1:packages) <= 1)
 
 
 @objective(model, Min, sum(z))
-# println(model);
+println(model)
 optimize!(model);
 if termination_status(model) == OPTIMAL
     for p in 1:packages
         println("Package $p")
         for k in 1:crowd_shippers
             println("\tCrowd Shipper $k")
-            for i in 1:stations, j in 1:stations if adj_mat[i, j] == 1
-                    if value(x_out[i, j, k, p]) == 1.
-                        println("\t\t $i $j");
-                    end
+            for i in 1:stations, j in 1:stations if adj_mat[i, j] == 1 && T[i, j, k] == 1
+                if value(x_out[i, j, k, p]) == 1.
+                    println("\t\tO $i $j");
+                end
+                if value(x_inc[i, j, k, p]) == 1.
+                    println("\t\tI $i $j");
                 end
             end
         end
+    end
     end
     println(value.(z))
 else    
