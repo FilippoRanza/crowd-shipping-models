@@ -91,13 +91,13 @@ set_optimizer_attribute(model, "threads", 6)
     select_cs[k = 1:crowd_shippers], 
     sum(x_inc[i, j, k, p] 
         for i = 1:stations, j = 1:stations, p = 1:packages 
-            if adj_mat[i, j] == 1 && T[k, i, j] == 1) 
+            if adj_mat[i, j] == 1 && T[k][i, j] == 1) 
     <= 1000z[k])
 
 
 
 @constraint(model, 
-    one_package_inc[i = 1:stations, j = 1:stations, k = 1:crowd_shippers; adj_mat[i, j] == 1 && T[k, i, j] == 1], 
+    one_package_inc[i = 1:stations, j = 1:stations, k = 1:crowd_shippers; adj_mat[i, j] == 1 && T[k][i, j] == 1], 
     sum(x_inc[i, j, k, p] for p in 1:packages) <= 1)
 
 
@@ -109,7 +109,7 @@ if termination_status(model) == OPTIMAL
         println("Package $p")
         for k in 1:crowd_shippers
             println("\tCrowd Shipper $k")
-            for i in 1:stations, j in 1:stations if adj_mat[i, j] == 1 && T[k, i, j] == 1
+            for i in 1:stations, j in 1:stations if adj_mat[i, j] == 1 && T[k][i, j] == 1
                 if value(x_out[i, j, k, p]) == 1.
                     println("\t\tO $i $j");
                 end
