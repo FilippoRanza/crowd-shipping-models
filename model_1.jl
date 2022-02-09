@@ -43,7 +43,7 @@ packages = size(P, 1)
 crowd_shippers = size(crowd_shipper_paths, 1)
 arrival = ones(crowd_shippers)
 
-T = [spzeros(stations, stations) for i in 1:crowd_shippers]
+T = [spzeros(Int8, stations, stations) for i in 1:crowd_shippers]
 for i in 1:crowd_shippers
     prev = nothing
     for curr in crowd_shipper_paths[i]
