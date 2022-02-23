@@ -131,23 +131,21 @@ function print_result(model)
             println("Package $p")
             for k in 1:crowd_shippers
                 output = false
-        
-                for i in 1:stations, j in 1:stations if adj_mat[i, j] == 1 && T[k][i, j] == 1
-                    if value(x[i, j, k, p]) == 1.
-                        if !output
-                            println("\tCrowd Shipper $k")
-                            output = true
+                for i in 1:stations, j in 1:stations 
+                    if adj_mat[i, j] == 1 && T[k][i, j] == 1
+                        if value(x[i, j, k, p]) == 1.
+                            if !output
+                                println("\tCrowd Shipper $k")
+                                output = true
+                            end
+                            println("\t\t$i -> $j");
                         end
-                        println("\t\t$i -> $j");
                     end
-
                 end
-            end
-        end
+            end    
         end
     else    
         println("Model infeasible!")
         println()
     end         
 end
-
