@@ -5,6 +5,7 @@ using SparseArrays;
 using JuMP;
 using Cbc;
 
+include("utils.jl")
 
 P = [
     [1, 5],
@@ -19,6 +20,15 @@ crowd_shipper_paths = [
     [1, 2, 4],
     [3, 2, 5],
 ]
+∞ = Inf
+A = [
+    1 1 ∞ 1 ∞;
+    3 ∞ ∞ 3 6;
+    ∞ 5 ∞ ∞ 4;
+    ∞ ∞ 1 5 ∞;
+    ∞ ∞ 5 ∞ 8;
+]
+
 arrive = [
     1,
     2, 
@@ -60,30 +70,15 @@ for i in 1:crowd_shippers
     end
 end
 
+w = ones(stations)
+d = ones(stations, stations)
 
-function is_subpath(a, b)
-    for i in 1:length(b)-length(a) + 1
-        stat = true
-        for j in 1:length(a)
-            if a[j] != b[j + i - 1]
-                stat = false
-                break
-            end
-        end
-        if stat
-            return true
-        end
-    end
-    false
-end
-
-
-time_steps = 10
 
 model = Model(Cbc.Optimizer)
 set_optimizer_attribute(model, "threads", 6) 
 
 @variable(model, x[i = 1:stations, j = 1:stations, k = 1:crowd_shippers, p = 1:packages; adj_mat[i, j] == 1 && T[k][i, j] == 1], Bin)
+@variable(model, t[i = 1:stations, p = 1:packages] >= 0)
 @variable(model, z[1:crowd_shippers], Bin)
 
 @constraint(model, 
@@ -115,37 +110,49 @@ set_optimizer_attribute(model, "threads", 6)
     <= 1000z[k])
 
 
-
-
-
 @constraint(model, 
     one_package[i = 1:stations, j = 1:stations, k = 1:crowd_shippers; adj_mat[i, j] == 1 && T[k][i, j] == 1], 
     sum(x[i, j, k, p] for p in 1:packages) <= 1)
 
 
+
+@expression(
+    model,
+    not_before_expr[k = 1:crowd_shippers, p = 1:packages, i = 1:stations],
+    sum(x[i, j, k, p] for j ∈ 1:stations if adj_mat[i, j] == 1 && T[k][i, j] == 1)
+)
+
+@constraint(model,
+    not_before[k = 1:crowd_shippers, p = 1:packages, i = 1:stations; not_before_expr[k, p, i] ≠ 0.0],
+    t[i, p] >= A[i, k] * not_before_expr[k, p, i]
+)
+
+
+@expression(
+    model,
+    not_after_expr[p = 1:packages, i = 1:stations],
+    sum(A[i, k] * x[j, i, k, p] for j ∈ 1:stations, k ∈ 1:crowd_shippers if adj_mat[j, i] == 1 && T[k][j, i] == 1)
+)
+
+@constraint(model,
+    not_after[p = 1:packages, i = 1:stations; not_after_expr[p, i] ≠ 0.0 &&  P[p][2] ≠ i && P[p][1] ≠ i ],
+    t[i, p] <= w[i] + not_after_expr[p, i]
+)
+
+
+@expression(model,
+    positive_time_expr[i = 1:stations, j = 1:stations, p = 1:packages; adj_mat[i, j] == 1],
+    sum(x[i, j, k, p] for k in 1:crowd_shippers if T[k][i, j] == 1)
+)
+
+@constraint(model,
+    positive_time[i = 1:stations, j = 1:stations, p = 1:packages; adj_mat[i, j] == 1 && positive_time_expr[i, j, p] ≠ 0],
+    t[i, p] + (w[i] + d[i, j])*positive_time_expr[i, j, p]
+    <= 
+    t[j, p] + 1000(1 - positive_time_expr[i, j, p])
+)
+
+
 @objective(model, Min, sum(z))
 optimize!(model)
-function print_result(model)
-    if termination_status(model) == OPTIMAL
-        for p in 1:packages
-            println("Package $p")
-            for k in 1:crowd_shippers
-                output = false
-                for i in 1:stations, j in 1:stations 
-                    if adj_mat[i, j] == 1 && T[k][i, j] == 1
-                        if value(x[i, j, k, p]) == 1.
-                            if !output
-                                println("\tCrowd Shipper $k")
-                                output = true
-                            end
-                            println("\t\t$i -> $j");
-                        end
-                    end
-                end
-            end    
-        end
-    else    
-        println("Model infeasible!")
-        println()
-    end         
-end
+
