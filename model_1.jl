@@ -118,13 +118,13 @@ set_optimizer_attribute(model, "threads", 6)
 
 @expression(
     model,
-    not_before_expr[k = 1:crowd_shippers, p = 1:packages, i = 1:stations],
-    sum(x[i, j, k, p] for j ∈ 1:stations if adj_mat[i, j] == 1 && T[k][i, j] == 1)
+    not_before_expr[k = 1:crowd_shippers, p = 1:packages, i = 1:stations ],
+    sum(A[i, k] * x[j, i, k, p] for j ∈ 1:stations if adj_mat[j, i] == 1 && T[k][j, i] == 1)
 )
 
 @constraint(model,
-    not_before[k = 1:crowd_shippers, p = 1:packages, i = 1:stations; not_before_expr[k, p, i] ≠ 0.0],
-    t[i, p] >= A[i, k] * not_before_expr[k, p, i]
+    not_before[k = 1:crowd_shippers, p = 1:packages, i = 1:stations; not_before_expr[k, p, i] ≠ 0.0 ],
+    t[i, p] >=  not_before_expr[k, p, i]
 )
 
 
@@ -135,7 +135,7 @@ set_optimizer_attribute(model, "threads", 6)
 )
 
 @constraint(model,
-    not_after[p = 1:packages, i = 1:stations; not_after_expr[p, i] ≠ 0.0 &&  P[p][2] ≠ i && P[p][1] ≠ i ],
+    not_after[p = 1:packages, i = 1:stations; not_after_expr[p, i] ≠ 0.0 ],
     t[i, p] <= w[i] + not_after_expr[p, i]
 )
 
@@ -146,7 +146,7 @@ set_optimizer_attribute(model, "threads", 6)
 )
 
 @constraint(model,
-    positive_time[i = 1:stations, j = 1:stations, p = 1:packages; adj_mat[i, j] == 1 && positive_time_expr[i, j, p] ≠ 0],
+    positive_time[i = 1:stations, j = 1:stations, p = 1:packages; adj_mat[i, j] == 1 && positive_time_expr[i, j, p] ≠ 0 ],
     t[i, p] + (w[i] + d[i, j])*positive_time_expr[i, j, p]
     <= 
     t[j, p] + 1000(1 - positive_time_expr[i, j, p])
