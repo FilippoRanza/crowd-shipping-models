@@ -1,3 +1,7 @@
 [deps]
 Cbc = "9961bab8-2fa3-5c5a-9d89-47fab24efd76"
+Configurations = "5218b696-f38b-4ac9-8b61-a12ec717816d"
+Gurobi = "2e9cd046-0924-5485-92f1-d5272153d98b"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
