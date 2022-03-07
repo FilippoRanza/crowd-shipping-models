@@ -26,3 +26,6 @@ docs/site/
 *.json
 *.hdf5
 .vscode/
+sol/
+*.csv
+*.bak

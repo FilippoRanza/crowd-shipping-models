@@ -35,7 +35,8 @@ function build_model(model::Model, conf::ModelConfig, net::NetworkInfo, parcels,
         start_pkg[id = 1:conf.packages,],
         sum(
             x[parcels[id, 1], j, k, id] for
-            j = 1:conf.stations, k = 1:conf.crowd_shippers if csr_direct_path(net, parcels[id, 1], j, k)
+            j = 1:conf.stations, k = 1:conf.crowd_shippers if
+            csr_direct_path(net, parcels[id, 1], j, k)
         ) == 1
     )
 
@@ -44,14 +45,19 @@ function build_model(model::Model, conf::ModelConfig, net::NetworkInfo, parcels,
         arrive_pkg[id = 1:conf.packages],
         sum(
             x[j, parcels[id, 2], k, id] for
-            j = 1:conf.stations, k = 1:conf.crowd_shippers if csr_direct_path(net, j, parcels[id, 2], k)
+            j = 1:conf.stations, k = 1:conf.crowd_shippers if
+            csr_direct_path(net, j, parcels[id, 2], k)
         ) == 1
     )
 
 
     @constraint(
         model,
-        flow[id = 1:conf.packages, i = 1:conf.stations; parcels[id, 2] ≠ i && parcels[id, 1] ≠ i],
+        flow[
+            id = 1:conf.packages,
+            i = 1:conf.stations;
+            parcels[id, 2] ≠ i && parcels[id, 1] ≠ i,
+        ],
         sum(
             x[j, i, k, id] for
             j = 1:conf.stations, k = 1:conf.crowd_shippers if csr_direct_path(net, j, i, k)
@@ -67,7 +73,8 @@ function build_model(model::Model, conf::ModelConfig, net::NetworkInfo, parcels,
         select_cs[k = 1:conf.crowd_shippers],
         sum(
             x[i, j, k, p] for
-            i = 1:conf.stations, j = 1:conf.stations, p = 1:conf.packages if csr_direct_path(net, i, j, k)
+            i = 1:conf.stations, j = 1:conf.stations, p = 1:conf.packages if
+            csr_direct_path(net, i, j, k)
         ) <= 1000z[k]
     )
 
@@ -85,8 +92,15 @@ function build_model(model::Model, conf::ModelConfig, net::NetworkInfo, parcels,
 
     @expression(
         model,
-        not_before_expr[k = 1:conf.crowd_shippers, p = 1:conf.packages, i = 1:conf.stations],
-        sum(arrival[i, k] * x[j, i, k, p] for j ∈ 1:conf.stations if csr_direct_path(net, j, i, k))
+        not_before_expr[
+            k = 1:conf.crowd_shippers,
+            p = 1:conf.packages,
+            i = 1:conf.stations,
+        ],
+        sum(
+            arrival[i, k] * x[j, i, k, p] for
+            j ∈ 1:conf.stations if csr_direct_path(net, j, i, k)
+        )
     )
 
     @constraint(
